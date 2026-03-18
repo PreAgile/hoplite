@@ -36,9 +36,9 @@ rocketraman이 sksamuel과 Slack에서 논의한 내용을 정리:
 
 ## 기술적 분석
 
-### 근본 원인 (추정)
+### 근본 원인
 
-`EnvironmentVariablesPropertySource`가 시스템의 모든 환경변수를 로드하지만, strict mode의 unused 체크는 config data class에 매핑되지 않은 **모든** 노드를 에러로 처리함.
+`EnvironmentVariablesPropertySource`(`sources/EnvironmentVariablesPropertySource.kt`)가 시스템의 모든 환경변수를 노드 트리로 변환한다. strict mode의 unused 체크는 `DecodeModeValidator.ensureAllUsed()`에서 `state.unused`가 비어있지 않으면 에러를 발생시키는데, config data class에 매핑되지 않은 환경변수 노드가 모두 unused로 잡힌다.
 
 ### 수정 방향 (커뮤니티 제안 기반)
 
@@ -46,21 +46,31 @@ rocketraman이 sksamuel과 Slack에서 논의한 내용을 정리:
 2. **환경변수 프로세서 기본 동작 변경**: 환경변수는 strict 체크에서 기본 제외
 3. **화이트리스트/블랙리스트**: 특정 prefix의 환경변수만 strict 체크 대상으로
 
-### 영향받는 코드 (추정)
+### 영향받는 코드 — 실제 진입점
 
-- `hoplite-core/src/main/kotlin/com/sksamuel/hoplite/` 내 strict mode 검증 로직
-- `EnvironmentVariablesPropertySource` 관련 코드
-- `ConfigParser` 또는 `Decoding`의 unused 체크 로직
+| 파일 | 함수/위치 | 역할 |
+|------|-----------|------|
+| `hoplite-core/.../internal/DecodeModeValidator.kt:14-18` | `validate()` | strict 모드 분기 → `ensureAllUsed()` 호출 |
+| `hoplite-core/.../internal/DecodeModeValidator.kt:21-26` | `ensureAllUsed()` | `state.unused`가 비어있지 않으면 에러 반환 — **핵심 수정 지점** |
+| `hoplite-core/.../internal/Decoding.kt:33-42` | `createDecodingState()` | `root.decodedPaths()`에서 모든 노드를 수집 후 used/unused 파티셔닝 — **필터링 추가 지점** |
+| `hoplite-core/.../sources/EnvironmentVariablesPropertySource.kt:13-38` | `node()` | 환경변수 → 노드 변환. prefix 필터링은 있지만 strict 제외 로직 없음 |
+| `hoplite-core/.../ConfigFailure.kt:32-36` | `UnusedPath` | 에러 메시지 생성 |
+
+### 수정 후보 테스트
+
+| 테스트 파일 위치 (신규 작성) | 검증 내용 |
+|------------------------------|-----------|
+| `hoplite-core/src/test/kotlin/.../StrictModeEnvVarTest.kt` | 환경변수 존재 시 strict mode가 config 파일 unused만 체크하는지 |
 
 ## 머지 확률 분석
 
 | 요소 | 평가 |
 |------|------|
-| `bug` 라벨 | 메인테이너 인정 버그 |
-| v3.0.0 RC 단계 | 정식 릴리스 전 수정 필요 |
-| 주요 기여자가 보고 | rocketraman은 다수 PR 머지된 신뢰 기여자 |
+| `bug` 라벨 | 메인테이너가 버그로 분류 |
+| v3.0.0 RC 단계 | 정식 릴리스 전 수정 필요성 높음 |
+| 주요 기여자가 보고 | rocketraman은 다수 PR 머지된 collaborator |
 | 커뮤니티 관심 | 3명이 논의 참여 |
-| **종합 머지 확률** | **95%** |
+| **종합 판단** | **매우 높음 — bug 라벨 + RC 블로커 + 최근 20건 외부 PR 코드 사유 리젝 0건** |
 
 ## 포트폴리오 가치
 

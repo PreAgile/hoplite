@@ -40,27 +40,37 @@ ConfigException: Failed to load ORT configuration:
 
 ### 근본 원인
 
-strict mode의 unused 체크가 prefix로 사용된 루트 노드를 "사용되지 않은 값"으로 오인한다. prefix는 config 트리를 루팅하기 위한 용도인데, 검증 로직에서 이를 고려하지 않음.
+`ConfigParser.decode()` (`internal/ConfigParser.kt:82-106`)에서 `prefixedNode(prefix)`로 서브트리를 추출하지만, 이후 `createDecodingState()`는 **추출 전의 전체 노드 트리**에서 unused를 계산한다. 따라서 prefix 노드(`ort`) 자체가 "사용되지 않은 값"으로 보고됨.
 
 ### 수정 방향
 
-- strict mode의 unused 체크 시 `prefix` 파라미터로 전달된 경로는 제외
-- prefix 하위 노드만 unused 체크 대상으로
+- `createDecodingState()` 호출 시 prefix 경로를 전달하여 해당 경로와 그 상위 노드를 unused 체크에서 제외
+- 또는 `prefixedNode()` 적용 후의 서브트리만으로 unused를 계산하도록 변경
 
-### 영향받는 코드 (추정)
+### 영향받는 코드 — 실제 진입점
 
-- `ConfigParser.decode()` 또는 `Decoding.decode()` 내 strict 검증
-- prefix 기반 노드 필터링 로직
+| 파일 | 함수/위치 | 역할 |
+|------|-----------|------|
+| `hoplite-core/.../internal/ConfigParser.kt:82-106` | `decode()` | `prefixedNode(prefix)` 호출 후 `createDecodingState()` 호출 — **수정 지점** |
+| `hoplite-core/.../internal/ConfigParser.kt:141-145` | `prefixedNode()` | prefix로 서브트리 추출 |
+| `hoplite-core/.../internal/Decoding.kt:33-42` | `createDecodingState()` | unused 파티셔닝 — prefix 경로 필터 추가 필요 |
+| `hoplite-core/.../internal/DecodeModeValidator.kt:21-26` | `ensureAllUsed()` | unused 리스트 기반 에러 반환 |
+
+### 수정 후보 테스트
+
+| 테스트 파일 위치 (신규 작성) | 검증 내용 |
+|------------------------------|-----------|
+| `hoplite-core/src/test/kotlin/.../StrictModePrefixTest.kt` | prefix 사용 시 prefix 노드가 unused로 잡히지 않는지 |
 
 ## 머지 확률 분석
 
 | 요소 | 평가 |
 |------|------|
-| `bug` 라벨 | 명확한 버그 |
+| `bug` 라벨 | 메인테이너가 버그로 분류 |
 | 재현 방법 명확 | 코드와 에러 메시지 제공 |
 | 실제 프로젝트(ORT) 영향 | 실사용자 문제 |
-| 수정 범위 작음 | prefix 필터링 로직 추가 |
-| **종합 머지 확률** | **95%** |
+| 수정 범위 작음 | `createDecodingState()`에 prefix 필터 추가 |
+| **종합 판단** | **매우 높음 — bug 라벨 + 재현 명확 + 수정 범위 좁음** |
 
 ## 포트폴리오 가치
 

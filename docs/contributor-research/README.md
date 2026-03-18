@@ -52,8 +52,8 @@ Kotlin 백엔드 엔지니어가 `sksamuel/hoplite`에 기여할 후보를 정�
 
 최근 머지된 PR에서 관찰된 패턴:
 
-- 외부 PR **거의 100% 머지** — 리젝 사례가 사실상 없음
-- **테스트만 통과하면 머지한다** — PR #470에서 "fix the test and I can merge" 직접 코멘트
+- 외부 PR 머지율이 매우 높음 — 최근 20건 머지 PR 중 코드 품질 사유 리젝 0건 (확인한 비머지 3건은 메타 PR, 본인 실험 포기, 중복)
+- 테스트 통과가 머지의 핵심 조건 — PR #470에서 "fix the test and I can merge" 직접 코멘트
 - 작고 집중된 변경 선호
 - 코드 변경 시 테스트 포함 필수 (Kotest 프레임워크)
 - 문제 발생 시 revert 후 재적용하는 실용적 접근 (#483 → #485)
@@ -124,34 +124,34 @@ stale-bot이 자동 처리. 메인테이너가 관심 없음. 대표 예: #472, 
 
 | 순위 | 이슈 | 유형 | 머지 확률 | 상세 문서 |
 |------|------|------|----------|----------|
-| 1 | `#505` strict mode + 환경변수 실패 | 버그 수정 | 매우 높음 (95%) | [issue-505-strict-mode-env-vars.md](issue-505-strict-mode-env-vars.md) |
-| 2 | `#500` prefix + strict mode unused 에러 | 버그 수정 | 매우 높음 (95%) | [issue-500-prefix-strict-unused.md](issue-500-prefix-strict-unused.md) |
-| 3 | `#470` SecretFilesPreprocessor 테스트 수정 | PR 이어받기 | 확정 (99%) | [pr-470-secret-files-preprocessor.md](pr-470-secret-files-preprocessor.md) |
-| 4 | `#478` Enum default fallback 지원 | 기능 추가 | 높음 (85%) | [issue-478-enum-default-fallback.md](issue-478-enum-default-fallback.md) |
-| 5 | `#493` GraalVM native image KClass 실패 | 버그 수정 | 높음 (80%) | [issue-493-graalvm-kclass.md](issue-493-graalvm-kclass.md) |
+| 1 | `#505` strict mode + 환경변수 실패 | 버그 수정 | 매우 높음 — `bug` 라벨, v3.0.0 RC 블로커 | [issue-505-strict-mode-env-vars.md](issue-505-strict-mode-env-vars.md) |
+| 2 | `#500` prefix + strict mode unused 에러 | 버그 수정 | 매우 높음 — `bug` 라벨, 재현 코드+에러 명확 | [issue-500-prefix-strict-unused.md](issue-500-prefix-strict-unused.md) |
+| 3 | `#470` SecretFilesPreprocessor 테스트 수정 | PR 이어받기 | 거의 확정 — 메인테이너 "테스트 고치면 머지" 명시 | [pr-470-secret-files-preprocessor.md](pr-470-secret-files-preprocessor.md) |
+| 4 | `#478` Enum default fallback 지원 | 기능 추가 | 높음 — 유즈케이스 명확, 메인테이너 미응답이 변수 | [issue-478-enum-default-fallback.md](issue-478-enum-default-fallback.md) |
+| 5 | `#493` GraalVM native image KClass 실패 | 버그 수정 | 높음 — 커뮤니티 활발, 난이도가 변수 | [issue-493-graalvm-kclass.md](issue-493-graalvm-kclass.md) |
 
 ### 후보별 상세
 
 #### 1위: #505 — strict mode + 환경변수 실패 (`bug`)
 
 - **문제**: v3.0.0의 `strict()` 모드가 환경변수가 있는 환경에서 실패
-- **머지 확률**: 95% — `bug` 라벨, v3.0.0 RC 단계에서 가장 urgent한 이슈
-- **난이도**: 중간 — strict mode의 unused property 검증 로직 수정
+- **머지 판단 근거**: `bug` 라벨, v3.0.0 RC 단계 블로커, 최근 20건 외부 PR 중 코드 사유 리젝 0건
+- **난이도**: 중간 — `DecodeModeValidator.ensureAllUsed()` 및 `Decoding.createDecodingState()` 수정
 - **포트폴리오 어필**: "v3.0.0 정식 릴리스를 막고 있던 핵심 버그를 수정" → changelog에 이름
 - **전략**: #500과 근본 원인이 같을 가능성 높음. 하나의 PR로 두 이슈 동시 해결 시 임팩트 극대화
 
 #### 2위: #500 — prefix + strict mode unused 에러 (`bug`)
 
 - **문제**: prefix를 사용하는 config 로딩에서 strict mode가 잘못된 unused 에러 발생
-- **머지 확률**: 95% — #505와 동일 조건
-- **난이도**: 중간 — strict 검증에서 prefix 필터링 로직 누락
+- **머지 판단 근거**: `bug` 라벨, 재현 코드+에러 메시지 명확, #505와 동일 조건
+- **난이도**: 중간 — `ConfigParser.decode()`의 `prefixedNode()` 호출 후 unused 체크에서 prefix 노드 제외 필요
 - **포트폴리오 어필**: Config prefix binding 로직 이해 증명
 - **전략**: #505와 묶어서 하나의 PR로 제출 권장
 
 #### 3위: #470 — SecretFilesPreprocessor (기존 PR 이어받기)
 
 - **문제**: Bengreen이 제출한 SecretFilesPreprocessor PR의 테스트가 깨져 있음
-- **머지 확률**: 99% — sksamuel이 "fix the test and I can merge and release" 명시
+- **머지 판단 근거**: sksamuel이 "fix the test and I can merge and release" 명시 (2025-03-16 코멘트)
 - **난이도**: 낮음 — 기존 코드 기반에서 테스트만 수정
 - **포트폴리오 어필**: Secret management 이해, 오픈소스 협업 (다른 기여자 작업 계승)
 - **전략**: Bengreen 브랜치 포크 → 테스트 수정 → 새 PR 제출. 기존 작성자에게 예의 코멘트 필수
@@ -159,15 +159,15 @@ stale-bot이 자동 처리. 메인테이너가 관심 없음. 대표 예: #472, 
 #### 4위: #478 — Enum default fallback 지원
 
 - **문제**: 잘못된 enum 값이 들어올 때 기본값으로 fallback하는 옵션이 없음
-- **머지 확률**: 85% — 명확한 유즈케이스, 기존 Decoder 패턴 따라 구현 가능
-- **난이도**: 중간 — EnumDecoder 수정 + 새 옵션 추가
+- **머지 판단 근거**: 유즈케이스 명확, 기존 Decoder 패턴 따라 구현 가능. 메인테이너 미응답(코멘트 0건)이 유일한 불확실성
+- **난이도**: 중간 — `EnumDecoder.safeDecode()` (`enum.kt:28-45`) 수정 + fallback 로직 추가
 - **포트폴리오 어필**: Type-safe config 설계, Decoder 아키텍처 이해
 - **전략**: 이슈에 설계 제안 코멘트 먼저 → 메인테이너 승인 후 구현
 
 #### 5위: #493 — GraalVM native image KClass 실패
 
 - **문제**: GraalVM native image에서 KClass 런타임 체크 실패
-- **머지 확률**: 80% — 실제 사용자 요구, 메인테이너가 질문으로 관심 표시
+- **머지 판단 근거**: 7건 활발한 논의, 메인테이너 질문 코멘트, 실사용자(ORT) 영향. GraalVM 전문 지식 필요가 불확실성
 - **난이도**: 높음 — GraalVM reflection metadata 이해 필요
 - **포트폴리오 어필**: 클라우드 네이티브 환경 경험, JVM 내부 이해
 - **전략**: GraalVM reachability metadata 또는 reflection config 추가

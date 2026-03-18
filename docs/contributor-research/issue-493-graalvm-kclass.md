@@ -66,10 +66,21 @@ GraalVM은 reflection을 AOT(Ahead-of-Time) 등록 방식으로 처리. Kotlin�
 **옵션 3: GraalVM Feature 클래스 제공**
 - `org.graalvm.nativeimage.hosted.Feature` 구현하여 자동 등록
 
-### 영향받는 코드
+### 영향받는 코드 — 실제 진입점
 
-- `hoplite-core/src/main/kotlin/com/sksamuel/hoplite/decoder/DecoderRegistry.kt:51`
-- `example-native/META-INF/native-image/generated/reflect-config.json`
+| 파일 | 함수/위치 | 역할 |
+|------|-----------|------|
+| `hoplite-core/.../decoder/DecoderRegistry.kt:51` | `decoder()` | `require(type.classifier is KClass<*>)` — **실패 지점**. GraalVM에서 `type.classifier`가 `???`로 나타남 |
+| `hoplite-core/.../decoder/DecoderRegistry.kt:49-58` | `decoder()` 전체 | KClass 체크 후 `filteredDecoders` 탐색 로직 |
+| `hoplite-core/.../decoder/enum.kt:19` | `EnumDecoder.supports()` | 동일한 `type.classifier is KClass<*>` 패턴 사용 — 같은 문제 발생 가능 |
+| `example-native/META-INF/native-image/generated/reflect-config.json` | — | 기존 GraalVM reflection config (업데이트 필요) |
+
+**실패하는 코드 (DecoderRegistry.kt:51):**
+```kotlin
+require(type.classifier is KClass<*>) {
+  "Only instances of KClass are supported [was ${type.classifier ?: type}]"
+}
+```
 
 ## 머지 확률 분석
 
@@ -79,8 +90,8 @@ GraalVM은 reflection을 AOT(Ahead-of-Time) 등록 방식으로 처리. Kotlin�
 | 메인테이너 관심 | sksamuel 질문 코멘트 |
 | 7건의 활발한 논의 | 커뮤니티 관심 높음 |
 | 기존 native-image 예제 존재 | 프로젝트가 GraalVM 지원 의지 있음 |
-| 기술적 난이도 높음 | GraalVM 전문 지식 필요 |
-| **종합 머지 확률** | **80%** |
+| 기술적 난이도 높음 | GraalVM 전문 지식 필요 — 주요 불확실성 |
+| **종합 판단** | **높음 — 커뮤니티 관심+메인테이너 관심은 확실하나, 기술 난이도와 정확한 원인 파악이 변수** |
 
 ## 포트폴리오 가치
 

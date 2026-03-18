@@ -37,7 +37,22 @@ branding:
 
 ### 현재 동작
 
-`EnumDecoder`가 `valueOf()`를 호출하고 실패하면 `ConfigFailure`를 반환.
+`EnumDecoder.safeDecode()` (`decoder/enum.kt:28-45`)에서 `klass.java.enumConstants.find{}`로 매칭하고, 없으면 `ConfigFailure.InvalidEnumConstant(node, type, value).invalid()`를 반환한다.
+
+**실제 코드 (enum.kt:28-38):**
+```kotlin
+fun decode(value: String): ConfigResult<T> {
+  val t = klass.java.enumConstants.find {
+    it.toString().contentEquals(other = value, ignoreCase = context.config.resolveTypesCaseInsensitive)
+  }
+  return if (t == null)
+    ConfigFailure.InvalidEnumConstant(node, type, value).invalid()
+  else
+    (t as T).valid()
+}
+```
+
+수정 지점은 `t == null` 분기에서 data class의 Kotlin default value로 fallback하는 로직을 추가하는 것.
 
 ### 구현 방향 (제안)
 
@@ -61,6 +76,14 @@ ConfigLoaderBuilder.default()
     .build()
 ```
 
+### 영향받는 코드 — 실제 진입점
+
+| 파일 | 함수/위치 | 역할 |
+|------|-----------|------|
+| `hoplite-core/.../decoder/enum.kt:17-46` | `EnumDecoder` 전체 | enum 디코딩 로직 |
+| `hoplite-core/.../decoder/enum.kt:28-38` | `decode()` 내부 함수 | `enumConstants.find{}` → null일 때 에러 반환 — **수정 지점** |
+| `hoplite-core/.../ConfigFailure.kt` | `InvalidEnumConstant` | 에러 메시지 생성 |
+
 ### 고려사항
 
 - 기존 `@ConfigProperty` 어노테이션이 있는지 확인 필요
@@ -72,10 +95,10 @@ ConfigLoaderBuilder.default()
 | 요소 | 평가 |
 |------|------|
 | 명확한 유즈케이스 | 새 enum 값이 추가되기 전 하위호환 |
-| 메인테이너 미응답 | 관심도 불확실 |
+| 메인테이너 미응답 | 관심도 불확실 — 유일한 리스크 |
 | 기존 Decoder 패턴 따름 | 구현 난이도 적정 |
 | 코멘트 0건 | 커뮤니티 관심 낮음 |
-| **종합 머지 확률** | **85%** |
+| **종합 판단** | **높음 — 유즈케이스 명확하나, 메인테이너 미응답이 변수. 이슈 코멘트로 방향 확인 필수** |
 
 ## 포트폴리오 가치
 

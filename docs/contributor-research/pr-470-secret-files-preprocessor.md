@@ -67,10 +67,10 @@ println("Secrets DIR =$x")  // 제거 필요
 
 | 요소 | 평가 |
 |------|------|
-| 메인테이너 명시적 승인 | "fix the test and I can merge and release" |
+| 메인테이너 명시적 승인 | "fix the test and I can merge and release" (2025-03-16 코멘트) |
 | 기능 자체는 승인됨 | K8s 시크릿 관련 질문 후 만족 |
 | Bengreen 1년 미응답 | 다른 기여자가 이어받을 수 있음 |
-| **종합 머지 확률** | **99%** |
+| **종합 판단** | **거의 확정 — 메인테이너가 머지를 약속한 유일한 열린 PR** |
 
 ## 포트폴리오 가치
 
