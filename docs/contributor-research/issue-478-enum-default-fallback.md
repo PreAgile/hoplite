@@ -52,7 +52,7 @@ fun decode(value: String): ConfigResult<T> {
 }
 ```
 
-수정 지점은 `t == null` 분기에서 data class의 Kotlin default value로 fallback하는 로직을 추가하는 것.
+**1차 확인 지점**은 이 `t == null` 분기이다. 다만 **최종 수정 지점은 다를 수 있다** — data class default value 접근 책임이 EnumDecoder 레벨에 있는지, 아니면 상위의 `DataClassDecoder`가 파라미터 기본값을 처리한 뒤 EnumDecoder에는 유효한 값만 내려오는 구조인지를 먼저 확인해야 한다. 즉 EnumDecoder에서 직접 fallback을 구현하는 것이 맞는지, 아니면 디코딩 파이프라인 상위에서 "디코더 실패 시 Kotlin default 사용" 로직을 넣는 것이 맞는지는 코드 검증이 필요하다.
 
 ### 구현 방향 (제안)
 
